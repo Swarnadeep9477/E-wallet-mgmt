@@ -1,0 +1,23 @@
+# SwiftPay E-wallet Management requirements
+#
+# This is a Node.js/Express project, not a Python project.
+# Install dependencies with:
+#   npm install
+#
+# Run the app with:
+#   npm start
+#
+# Runtime requirements:
+# - Node.js 18 or newer
+# - npm
+# - SQLite, via the better-sqlite3 npm package
+#
+# Main npm dependencies, managed in package.json:
+bcryptjs@^3.0.2
+better-sqlite3@^11.10.0
+cookie-parser@^1.4.7
+express@^5.1.0
+jsonwebtoken@^9.0.2
+multer@^2.1.1
+nodemailer@^8.0.10
+qrcode@^1.5.4
