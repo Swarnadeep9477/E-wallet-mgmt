@@ -1,0 +1,28 @@
+{
+  "name": "e-wallet-management",
+  "version": "1.0.0",
+  "description": "Dummy fullstack E-wallet management system with real database-backed authentication.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js"
+  },
+  "keywords": [
+    "wallet",
+    "express",
+    "sqlite",
+    "fullstack"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "better-sqlite3": "^11.10.0",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.1.1",
+    "nodemailer": "^8.0.10",
+    "qrcode": "^1.5.4"
+  }
+}
