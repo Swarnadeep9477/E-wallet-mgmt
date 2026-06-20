@@ -491,7 +491,7 @@ function formData(form) {
 }
 
 function swiftPayBrandMarkup(extraClass = "") {
-  return `<span class="swiftpay-brand ${extraClass}"><img src="/swiftpay-icon.png" alt="" class="swiftpay-logo" aria-hidden="true"><span>SwiftPay</span></span>`;
+  return `<span class="swiftpay-brand ${extraClass}"><img src="/swiftpay-icon.png" alt="" class="swiftpay-logo" aria-hidden="true"><a href="home.html" style="color:white;text-decoration: none">SwiftPay</a></span>`;
 }
 
 function bankIconMarkup(bank) {
