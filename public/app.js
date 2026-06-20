@@ -643,6 +643,27 @@ function loginForm() {
   `;
 }
 
+function validateBankAccField(input) {
+  let e = input.parentNode.querySelector('.bank-acc-err');
+  const valid = /^\d{8,18}$/.test(input.value.trim());
+
+  if (!valid) {
+    if (!e) {
+      input.insertAdjacentHTML(
+        'afterend',
+        '<div class="bank-acc-err" style="color:red;font-size:12px;margin-top:4px;">Bank account number must be 8 to 18 digits</div>'
+      );
+    }
+  } else if (e) {
+    e.remove();
+  }
+}
+
+function clearBankAccError(input) {
+  const e = input.parentNode.querySelector('.bank-acc-err');
+  if (e) e.remove();
+}
+
 function signupForm() {
   const d = state.signupData || {};
   const selectedUpi = d.upiHandle || "@ybl";
@@ -662,7 +683,7 @@ function signupForm() {
       ${otpVerifyBlock("phone", "Phone verification", "phone", state.signupOtp.phone)}
       <div class="two bank-signup-row">
         ${bankPickerField(d.bankName || '')}
-        <label>Bank account no. (unique) <input name="bankAccountNo" required placeholder="AC987654321" value="${esc(d.bankAccountNo || '')}"></label>
+        <label>Bank account no. (unique) <input name="bankAccountNo" required placeholder="12345678" value="${esc(d.bankAccountNo || '')}" onblur="validateBankAccField(this)" oninput="clearBankAccError(this)"></label>
       </div>
       <label>UPI provider ${chipGroup("upiHandle", upiItems, upiActiveIndex)}</label>
       <input type="hidden" name="upiHandle" value="${esc(selectedUpi)}" data-mirror-radio="upiHandle">
