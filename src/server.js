@@ -24,9 +24,23 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "dev-wallet-secret-change-me";
 
+/* Landing page first */
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/home.html"));
+});
+
+/* Auth / app portal */
+app.get("/portal", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/index.html"));
+});
+
+app.use(express.static(path.join(__dirname, "../public")));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+
+
 
 function signToken(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
@@ -90,6 +104,20 @@ app.post("/api/auth/otp/send", async (req, res) => {
   try {
     const { channel, target, purpose } = req.body || {};
     if (!channel || !target) return res.status(400).json({ error: "Channel and target are required." });
+
+    if ((purpose || "signup") === "signup" && channel === "email") {
+      const emailNorm = normalizeEmail(target);
+      if (isAdminEmail(emailNorm)) {
+        return res.status(409).json({ error: "This email is reserved for admin login only." });
+      }
+      if (db.prepare("SELECT 1 FROM users WHERE email = ?").get(emailNorm)) {
+        return res.status(409).json({ error: "This email is already registered. Try logging in instead." });
+      }
+      if (db.prepare("SELECT 1 FROM admins WHERE email = ?").get(emailNorm)) {
+        return res.status(409).json({ error: "This email is already used by an administrator." });
+      }
+    }
+
     const result = await sendOtp({ channel, target, purpose: purpose || "signup" });
     res.json(result);
   } catch (error) {

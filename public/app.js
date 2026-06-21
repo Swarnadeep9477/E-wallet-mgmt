@@ -733,6 +733,24 @@ function validateBankAccField(input) {
   }
 }
 
+function showFieldError(input, message) {
+  if (!input) return;
+  let err = input.parentNode.querySelector(".field-err");
+  if (!err) {
+    err = document.createElement("div");
+    err.className = "field-err";
+    err.style.cssText = "color:red;font-size:12px;margin-top:4px;";
+    input.insertAdjacentElement("afterend", err);
+  }
+  err.textContent = message;
+}
+
+function clearFieldError(input) {
+  if (!input) return;
+  const err = input.parentNode.querySelector(".field-err");
+  if (err) err.remove();
+}
+
 function clearBankAccError(input) {
   const e = input.parentNode.querySelector('.bank-acc-err');
   if (e) e.remove();
@@ -751,7 +769,7 @@ function signupForm() {
         <label>Full name <input name="name" required placeholder="Your name" value="${esc(d.name || '')}"></label>
         <label>Date of birth <input name="dob" type="date" required max="${MAX_DOB}" value="${esc(d.dob || '')}"></label>
       </div>
-      <label>Email <input name="email" id="signupEmail" type="email" required placeholder="you@example.com" value="${esc(d.email || '')}" ${state.signupOtp.email ? 'readonly' : ''}></label>
+      <label>Email <input name="email" id="signupEmail" type="email" required placeholder="you@example.com" value="${esc(d.email || '')}" ${state.signupOtp.email ? 'readonly' : ''} oninput="clearFieldError(this)"></label>
       ${otpVerifyBlock("email", "Email verification", "email", state.signupOtp.email)}
       <label>Phone (10 digits) <input name="phone" id="signupPhone" required placeholder="9876543210" inputmode="numeric" maxlength="10" value="${esc(d.phone || '')}" ${state.signupOtp.phone ? 'readonly' : ''}></label>
       ${otpVerifyBlock("phone", "Phone verification", "phone", state.signupOtp.phone)}
@@ -1963,7 +1981,15 @@ document.addEventListener("click", async (e) => {
       }
       showToast(data.delivery_hint || "OTP sent.");
       if (purpose === "signup") authScreen();
-    } catch (err) { showToast(err.message); }
+    } catch (err) {
+      if (purpose === "signup" && (channel === "email" || channel === "phone")) {
+        const fieldInput = channel === "email"
+          ? (form.querySelector("#signupEmail") || form.querySelector('input[name="email"]'))
+          : (form.querySelector("#signupPhone") || form.querySelector('input[name="phone"]'));
+        showFieldError(fieldInput, err.message);
+      }
+      showToast(err.message);
+    }
     return;
   }
 
