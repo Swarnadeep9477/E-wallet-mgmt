@@ -80,12 +80,17 @@ async function sendOtp({ channel, target, purpose = "signup" }) {
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(challengeId, channel, normalized, purpose, bcrypt.hashSync(code, 10), expiresAt);
   if (channel === "email") {
-  await transporter.sendMail({
-    from: "swarnadeep9477@gmail.com",
-    to: normalized,
-    subject: "SwiftPay OTP Verification",
-    text: `Your OTP is ${code}. It is valid for 5 minutes.`
-  });
+  try {
+    await transporter.sendMail({
+      from: process.env.GMAIL_USER,
+      to: normalized,
+      subject: "SwiftPay OTP Verification",
+      text: `Your OTP is ${code}. It is valid for 5 minutes.`
+    });
+  } catch (err) {
+    console.error("OTP email send failed:", err.message);
+    // Don't block the flow in dev/demo — dev_otp is still returned below
+  }
 }
 
   const deliveryHint = channel === "email"
