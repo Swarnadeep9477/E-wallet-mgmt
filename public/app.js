@@ -2100,7 +2100,6 @@ document.addEventListener("click", async (e) => {
     box.dataset.pin = `${box.dataset.pin || ""}${pinKey.dataset.pinKey}`.slice(0, 4);
     updatePinDisplay(box);
     box.querySelector("#upiError").textContent = "";
-    if (box.dataset.pin.length === 4) await submitCheckoutPin(box);
     return;
   }
   if (e.target.id === "confirmPinBtn") {
@@ -2344,7 +2343,6 @@ document.addEventListener("keydown", async (e) => {
     box.dataset.pin = `${box.dataset.pin || ""}${e.key}`.slice(0, 4);
     updatePinDisplay(box);
     box.querySelector("#upiError").textContent = "";
-    if (box.dataset.pin.length === 4) await submitCheckoutPin(box);
   }
   if (e.key === "Enter") {
     await submitCheckoutPin(box);
