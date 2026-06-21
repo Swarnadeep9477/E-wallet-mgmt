@@ -1,4 +1,4 @@
-const nodemailer = require("nodemailer");
+/*const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -6,7 +6,7 @@ const transporter = nodemailer.createTransport({
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD
   }
-});
+});*/
 
 
 
@@ -59,6 +59,7 @@ function getLatestChallenge(channel, target, purpose = "signup") {
   `).get(channel, normalized, purpose);
 }
 
+
 async function sendOtp({ channel, target, purpose = "signup" }) {
   ensureOtpTable();
   const normalized = normalizeTarget(channel, target);
@@ -79,7 +80,12 @@ async function sendOtp({ channel, target, purpose = "signup" }) {
     INSERT INTO otp_challenges (challenge_id, channel, target, purpose, code_hash, expires_at)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(challengeId, channel, normalized, purpose, bcrypt.hashSync(code, 10), expiresAt);
+  
   if (channel === "email") {
+  console.log(`[SwiftPay OTP] Email OTP for ${normalized}: ${code}`);
+ }
+  
+  /*if (channel === "email") {
   try {
     await transporter.sendMail({
       from: process.env.GMAIL_USER,
@@ -91,7 +97,7 @@ async function sendOtp({ channel, target, purpose = "signup" }) {
     console.error("OTP email send failed:", err.message);
     // Don't block the flow in dev/demo — dev_otp is still returned below
   }
-}
+}*/
 
   const deliveryHint = channel === "email"
     ? `Email OTP sent to ${normalized}`
