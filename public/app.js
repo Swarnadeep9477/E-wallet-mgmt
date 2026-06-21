@@ -40,6 +40,21 @@ const PAYMENT_METHODS = [
   { value: "credit", label: "Credit Card", desc: "Visa, Mastercard, Amex", icon: "CC", tone: "card" }
 ];
 
+const ICONS = {
+  dashboard: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>`,
+  wallet: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>`,
+  addMoney: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>`,
+  transfer: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>`,
+  bills: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+  recharge: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>`,
+  qr: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20v.01"/></svg>`,
+  history: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13a9 9 0 1 0 2.13-7.36L3 8"/><path d="M12 7v5l4 2"/></svg>`,
+  support: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 2-3 4"/><path d="M12 17h.01"/></svg>`,
+  profile: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  admin: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg>`,
+  supportAdmin: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>`
+};
+
 const TRANSFER_PAYMENT_METHODS = [
   { value: "wallet", label: "SwiftPay Wallet", desc: "Use your available balance", icon: "WL", tone: "wallet" },
   ...PAYMENT_METHODS
@@ -424,7 +439,7 @@ function kycStatusBanner() {
   const status = esc(state.user?.kyc_status || "pending");
   return `<div class="kyc-banner" role="alert">
     <strong>KYC not verified</strong>
-    <p>Current status: <span class="kyc-badge">${status}</span>. Payments and transfers are disabled until an admin sets KYC to <strong>verified</strong>.</p>
+    <p>Current status: <span class="kyc-badge">${status}</span>. Payments and transfers are temporarily disabled until an admin sets KYC status to <strong>verified</strong>...</p>
   </div>`;
 }
 
@@ -494,10 +509,11 @@ function refreshAdminTableUi() {
   if (host) host.outerHTML = adminTableMarkup();
 }
 
-function showToast(message) {
+function showToast(message, duration = 2600) {
   toast.textContent = message;
   toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 2600);
+  clearTimeout(toast._hideTimer);
+  toast._hideTimer = setTimeout(() => toast.classList.remove("show"), duration);
 }
 
 function applyTheme(theme) {
@@ -761,6 +777,14 @@ function signupForm() {
   const selectedUpi = d.upiHandle || "@ybl";
   const upiItems = [{ label: "@ybl (PhonePe)", value: "@ybl" }, { label: "@axl (Axis)", value: "@axl" }, { label: "@paytm", value: "@paytm" }, { label: "@oksbi", value: "@oksbi" }];
   const upiActiveIndex = Math.max(0, upiItems.findIndex(i => i.value === selectedUpi));
+  const genderItems = [{ label: "Male", value: "male" }, { label: "Female", value: "female" }, { label: "Other", value: "other" }];
+   const genderOptions = [
+    { label: "Select gender", value: "" },
+    { label: "Male", value: "male" },
+    { label: "Female", value: "female" },
+    { label: "Other", value: "other" }
+  ];
+  const selectedGender = d.gender || "";
   return `
     <h2 class="form-title">Create wallet</h2>
     <p class="subtle">Verify email and phone with OTP, then complete your profile. UPI ID is generated from your phone.</p>
@@ -769,6 +793,11 @@ function signupForm() {
         <label>Full name <input name="name" required placeholder="Your name" value="${esc(d.name || '')}"></label>
         <label>Date of birth <input name="dob" type="date" required max="${MAX_DOB}" value="${esc(d.dob || '')}"></label>
       </div>
+      <label>Gender
+        <select name="gender" required>
+          ${genderOptions.map((g) => `<option value="${esc(g.value)}" ${g.value === selectedGender ? "selected" : ""} ${g.value === "" ? "disabled" : ""}>${esc(g.label)}</option>`).join("")}
+        </select>
+      </label>
       <label>Email <input name="email" id="signupEmail" type="email" required placeholder="you@example.com" value="${esc(d.email || '')}" ${state.signupOtp.email ? 'readonly' : ''} oninput="clearFieldError(this)"></label>
       ${otpVerifyBlock("email", "Email verification", "email", state.signupOtp.email)}
       <label>Phone (10 digits) <input name="phone" id="signupPhone" required placeholder="9876543210" inputmode="numeric" maxlength="10" value="${esc(d.phone || '')}" ${state.signupOtp.phone ? 'readonly' : ''}></label>
@@ -780,7 +809,10 @@ function signupForm() {
       <label>UPI provider ${chipGroup("upiHandle", upiItems, upiActiveIndex)}</label>
       <input type="hidden" name="upiHandle" value="${esc(selectedUpi)}" data-mirror-radio="upiHandle">
       <div class="two">
-        ${passwordField("Password", "password", 'required minlength="6"')}
+        ${passwordField("Password", "password", 'required minlength="6" id="signupPassword" oninput="clearFieldError(this)"')}
+        ${passwordField("Confirm password", "confirmPassword", 'required minlength="6" id="signupConfirmPassword" oninput="clearFieldError(this)"')}
+      </div>
+      <div class="two">
         ${passwordField("Transaction PIN (4 digits)", "transactionPin", 'required minlength="4" maxlength="4" pattern="\\d{4}" inputmode="numeric"')}
       </div>
       <label>Address <input name="address" placeholder="City, state (optional)" value="${esc(d.address || '')}"></label>
@@ -837,30 +869,30 @@ function todayDateDisplay() {
 function shell(title, body) {
   const nav = state.role === "admin"
     ? [
-      ["dashboard", "Dashboard", "DB"],
-      ["wallet", "My Wallet", "WL"],
-      ["add-money", "Add Money", "+-"],
-      ["transfer", "Transfer", "TR"],
-      ["bills", "Pay Bills", "$"],
-      ["recharge", "Recharge", "RC"],
-      ["qrpay", "QR Pay", "QR"],
-      ["history", "Transactions", "HX"],
-      ["support", "Help & Support", "SP"],
-      ["profile", "Profile", "PF"],
-      ["admin", "Admin Panel", "AD"],
-      ["admin-support", "Support Admin", "SA"]
+      ["dashboard", "Dashboard", ICONS.dashboard],
+      ["wallet", "My Wallet", ICONS.wallet],
+      ["add-money", "Add Money", ICONS.addMoney],
+      ["transfer", "Transfer", ICONS.transfer],
+      ["bills", "Pay Bills", ICONS.bills],
+      ["recharge", "Recharge", ICONS.recharge],
+      ["qrpay", "QR Pay", ICONS.qr],
+      ["history", "Transactions", ICONS.history],
+      ["support", "Help & Support", ICONS.support],
+      ["profile", "Profile", ICONS.profile],
+      ["admin", "Admin Panel", ICONS.admin],
+      ["admin-support", "Support Admin", ICONS.supportAdmin]
     ]
     : [
-      ["dashboard", "Dashboard", "DB"],
-      ["wallet", "My Wallet", "WL"],
-      ["add-money", "Add Money", "+-"],
-      ["transfer", "Transfer", "TR"],
-      ["bills", "Pay Bills", "$"],
-      ["recharge", "Recharge", "RC"],
-      ["qrpay", "QR Pay", "QR"],
-      ["history", "Transactions", "HX"],
-      ["support", "Help & Support", "SP"],
-      ["profile", "Profile", "PF"]
+      ["dashboard", "Dashboard", ICONS.dashboard],
+      ["wallet", "My Wallet", ICONS.wallet],
+      ["add-money", "Add Money", ICONS.addMoney],
+      ["transfer", "Transfer", ICONS.transfer],
+      ["bills", "Pay Bills", ICONS.bills],
+      ["recharge", "Recharge", ICONS.recharge],
+      ["qrpay", "QR Pay", ICONS.qr],
+      ["history", "Transactions", ICONS.history],
+      ["support", "Help & Support", ICONS.support],
+      ["profile", "Profile", ICONS.profile]
     ];
 
   app.innerHTML = `
@@ -1169,7 +1201,7 @@ function openMoneyRequestPayCheckout(requestId, amount) {
   overlay.className = "checkout-overlay";
   overlay.id = "checkoutOverlay";
   overlay.innerHTML = `
-    <div class="upi-pin-box checkout-with-pay" role="dialog" aria-modal="true" data-pin="">
+    <div class="upi-pin-box checkout-with-pay" role="dialog" aria-modal="true" data-pin="" tabindex="-1" data-keyboard-disabled="1">
       <div class="upi-pin-head">
         <div class="upi-brand-row"><span class="upi-lock">SP</span><strong>SwiftPay</strong><span>Secure Pay</span></div>
         <button class="upi-close" id="closeCheckout" type="button" aria-label="Close">x</button>
@@ -2022,7 +2054,7 @@ document.addEventListener("click", async (e) => {
   if (e.target.id === "forgotPinBtn") {
     try {
       const data = await api("/api/support/forgot-pin", { method: "POST" });
-      showToast(data.message || "Forgot PIN request submitted.");
+      showToast(data.message || "Forgot PIN request submitted.",8000);
       state.view = "support";
       return route("support");
     } catch (err) { showToast(err.message); }
@@ -2159,6 +2191,17 @@ document.addEventListener("input", (e) => {
     state.adminSearch = e.target.value;
     refreshAdminTableUi();
   }
+  if (e.target.id === "signupPassword" || e.target.id === "signupConfirmPassword") {
+    const pw = document.getElementById("signupPassword");
+    const confirm = document.getElementById("signupConfirmPassword");
+    if (pw && confirm && confirm.value) {
+      if (pw.value !== confirm.value) {
+        showFieldError(confirm, "Passwords do not match.");
+      } else {
+        clearFieldError(confirm);
+      }
+    }
+  } 
 });
 
 document.addEventListener("change", (e) => {
@@ -2207,6 +2250,11 @@ document.addEventListener("submit", async (e) => {
     if (e.target.id === "signupForm") {
       if (!state.signupOtp.email || !state.signupOtp.phone) {
         throw new Error("Verify both email and phone with OTP before creating your account.");
+      }
+
+      const sd = formData(e.target);
+      if (sd.password !== sd.confirmPassword) {
+        throw new Error("Password and confirm password do not match.");
       }
       const data = await api("/api/auth/signup", { method: "POST", body: formData(e.target) });
       state.signupOtp = { email: false, phone: false };
@@ -2338,21 +2386,22 @@ applyTheme(state.theme);
 
 document.addEventListener("keydown", async (e) => {
   const box = document.querySelector(".upi-pin-box");
-  if (!box || box.dataset.busy === "1") return;
-  if (/^\d$/.test(e.key)) {
-    box.dataset.pin = `${box.dataset.pin || ""}${e.key}`.slice(0, 4);
-    updatePinDisplay(box);
-    box.querySelector("#upiError").textContent = "";
+
+  /* If payment PIN popup is open, block keyboard PIN entry completely */
+  if (box) {
+    if (["0","1","2","3","4","5","6","7","8","9","Backspace","Delete","Enter","NumpadEnter"].includes(e.key)) {
+      e.preventDefault();
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeCheckout();
+      return;
+    }
   }
-  if (e.key === "Enter") {
-    await submitCheckoutPin(box);
-  }
-  if (e.key === "Backspace") {
-    box.dataset.pin = (box.dataset.pin || "").slice(0, -1);
-    updatePinDisplay(box);
-  }
+
+  /* keep Escape working for admin modal even when checkout is not open */
   if (e.key === "Escape") {
-    closeCheckout();
     closeAdminEditModal();
   }
 });

@@ -11,6 +11,7 @@ const {
 } = require("./db");
 
 const { registerComplaintRoutes } = require("./complaintsRoutes");
+const { setComplaintStatus, FORGOT_PIN_CATEGORY } = require("./complaintsService");
 const {
   createMoneyRequestFromAuth,
   listMoneyRequestsForAuth,
@@ -413,8 +414,8 @@ app.post("/api/auth/signup", async (req, res) => {
   try {
     const { name, email, phone, password, bankAccountNo, bankName, address, dob, transactionPin, gender, upiHandle } = req.body;
     const emailNorm = normalizeEmail(email);
-    if (!name || !email || !phone || !password || !transactionPin || !bankAccountNo || !bankName || !dob) {
-      return res.status(400).json({ error: "Name, email, phone, DOB, bank name, bank account no., password and transaction PIN are required." });
+    if (!name || !email || !phone || !password || !transactionPin || !bankAccountNo || !bankName || !dob || !gender || !address) {
+      return res.status(400).json({ error: "Name, gender, address, email, phone, DOB, bank name, bank account no., password and transaction PIN are required." });
     }
     if (!isOtpVerified("email", emailNorm, "signup")) {
       return res.status(400).json({ error: "Verify your email with OTP before signing up." });
@@ -446,7 +447,7 @@ app.post("/api/auth/signup", async (req, res) => {
         INSERT INTO wallets (wallet_id, user_id, balance, transaction_pin_hash, transaction_pin_plain)
         VALUES (?, ?, ?, ?, ?)
       `).run(walletId, userId, 0, bcrypt.hashSync(pinValue, 12), pinValue);
-      return notify(userId, "Wallet created", `Your wallet ${walletId} and UPI ID ${upiId} are ready.`, "system");
+      return notify(userId, "Wallet created", `WELCOME ${name}! Your wallet ${walletId} and UPI ID ${upiId} are ready.`, "system");
     });
     const notificationId = create();
     await createWalletQr(walletId);
@@ -595,6 +596,16 @@ app.patch("/api/me/pin/reset-after-forgot", authWallet, (req, res) => {
     const wallet = getWalletByAuth(req.auth);
     db.prepare("UPDATE wallets SET transaction_pin_hash = ?, transaction_pin_plain = ?, updated_at = CURRENT_TIMESTAMP WHERE wallet_id = ?")
       .run(bcrypt.hashSync(newPinValue, 12), newPinValue, wallet.wallet_id);
+
+    const openComplaint = db.prepare(`
+      SELECT * FROM complaints
+      WHERE user_id = ? AND category = ? AND status NOT IN ('REJECTED', 'CLOSED', 'RESOLVED')
+      ORDER BY datetime(created_at) DESC LIMIT 1
+    `).get(req.auth.userId, FORGOT_PIN_CATEGORY);
+    if (openComplaint) {
+      setComplaintStatus(openComplaint, "RESOLVED", { type: "user", id: req.auth.userId });
+    }
+
     db.prepare("UPDATE users SET pin_reset_allowed = 0, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?").run(req.auth.userId);
     notify(req.auth.userId, "PIN reset complete", "Your new transaction PIN is now active.", "security");
     res.json({ ok: true, user: currentUser(req.auth.userId) });
