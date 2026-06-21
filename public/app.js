@@ -676,8 +676,8 @@ function authScreen() {
         </div>
         <div class="auth-art-mid">
           <span class="auth-tagline-eyebrow">Demo wallet platform</span>
-          <h1>E-wallet management - just get yo damn wallet gang.</h1>
-          <p>Every user receives a unique user ID, memorable wallet ID and QR payment code. Money is dummy, but authentication and records are stored in the local database.</p>
+          <h1>E-wallet management - get your digital wallet all along.</h1>
+          <p>From account creation to wallet allocation and payment verification, the system is designed to deliver structured, secure, and trackable digital wallet workflows.</p>
         </div>
         <div class="auth-art-bottom">
           <div class="auth-trust-row">
