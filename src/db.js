@@ -3,7 +3,8 @@ const Database = require("better-sqlite3");
 const bcrypt = require("bcryptjs");
 const QRCode = require("qrcode");
 
-const db = new Database(path.join(__dirname, "..", "wallet.db"));
+const dbPath = process.env.DB_PATH || path.join(__dirname, "..", "wallet.db");
+const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 
