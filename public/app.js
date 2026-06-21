@@ -2005,7 +2005,7 @@ document.addEventListener("click", async (e) => {
         saveSignupFormData(form);
       }
       const data = await api("/api/auth/otp/send", { method: "POST", body: { channel, target, purpose } });
-      if (purpose === "signup") state.signupOtpDev[channel] = channel === "email" ? "" : (data.dev_otp || "");
+      if (purpose === "signup") state.signupOtpDev[channel] = data.dev_otp || "";
       const hint = document.getElementById("forgotPwDevOtp");
       if (hint && data.dev_otp) {
         hint.textContent = `Demo OTP: ${data.dev_otp}`;
