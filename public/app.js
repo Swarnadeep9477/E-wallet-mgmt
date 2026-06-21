@@ -350,6 +350,65 @@ const initials = (name) => String(name || "U").trim().split(/\s+/).slice(0, 2).m
 
 const TX_VIEWS = new Set(["transfer", "bills", "recharge", "add-money", "qrpay"]);
 
+
+function animateCountUpEl(el) {
+  if (el.dataset.counted === "1") return;
+  el.dataset.counted = "1";
+  const target = parseFloat(el.getAttribute("data-count"));
+  if (Number.isNaN(target)) return;
+  const decimals = parseInt(el.getAttribute("data-decimals") || "0", 10);
+  const duration = 900;
+  const start = performance.now();
+  const tick = (now) => {
+    const progress = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = target * eased;
+    el.textContent = value.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    if (progress < 1) requestAnimationFrame(tick);
+    else el.textContent = target.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  };
+  requestAnimationFrame(tick);
+}
+
+function initCountUps() {
+  document.querySelectorAll("[data-count]").forEach(animateCountUpEl);
+}
+
+function initDashboardWalletTilt() {
+  const hero = document.getElementById("dashWalletHero");
+  if (!hero || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+  hero.addEventListener("mousemove", (e) => {
+    const rect = hero.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const rotateX = ((y / rect.height) - 0.5) * -6;
+    const rotateY = ((x / rect.width) - 0.5) * 8;
+    hero.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+    const shine = document.getElementById("dashWalletShine");
+    if (shine) {
+      shine.style.setProperty("--mx", `${(x / rect.width) * 100}%`);
+      shine.style.setProperty("--my", `${(y / rect.height) * 100}%`);
+    }
+  });
+  hero.addEventListener("mouseleave", () => {
+    hero.style.transform = "rotateX(0deg) rotateY(0deg)";
+  });
+}
+
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if (!btn || btn.disabled) return;
+  const rect = btn.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  const ripple = document.createElement("span");
+  ripple.className = "ripple";
+  ripple.style.width = ripple.style.height = `${size}px`;
+  ripple.style.left = `${e.clientX - rect.left - size / 2}px`;
+  ripple.style.top = `${e.clientY - rect.top - size / 2}px`;
+  btn.appendChild(ripple);
+  ripple.addEventListener("animationend", () => ripple.remove());
+});
+
 function isUserKycVerified() {
   return state.role !== "user" || String(state.user?.kyc_status || "").trim().toLowerCase() === "verified";
 }
@@ -607,10 +666,25 @@ function authScreen() {
   app.innerHTML = `
     <section class="auth-shell">
       <div class="auth-art">
-        <div class="brand">${swiftPayBrandMarkup("auth-brand-logo")}</div>
-        <div>
+        <div class="auth-art-bg">
+          <div class="auth-blob blob-a"></div>
+          <div class="auth-blob blob-b"></div>
+          <div class="auth-grid"></div>
+        </div>
+        <div class="auth-art-top">
+          <div class="brand">${swiftPayBrandMarkup("auth-brand-logo")}</div>
+        </div>
+        <div class="auth-art-mid">
+          <span class="auth-tagline-eyebrow">Demo wallet platform</span>
           <h1>E-wallet management - just get yo damn wallet gang.</h1>
           <p>Every user receives a unique user ID, memorable wallet ID and QR payment code. Money is dummy, but authentication and records are stored in the local database.</p>
+        </div>
+        <div class="auth-art-bottom">
+          <div class="auth-trust-row">
+            <span class="auth-trust-chip">🔒 256-bit encrypted</span>
+            <span class="auth-trust-chip">⚡ Instant wallet setup</span>
+            <span class="auth-trust-chip">🎓 Academic sandbox</span>
+          </div>
         </div>
       </div>
       <div class="auth-panel">
@@ -778,7 +852,16 @@ function shell(title, body) {
         <div class="nav">${nav.map(([id, label, icon]) => navButton(id, label, icon)).join("")}</div>
         ${state.role === "user" ? `<div class="sidebar-footer"><div class="avatar">${initials(state.user?.name)}</div><div><strong>${esc(state.user?.name)}</strong><span>${esc(state.user?.email)}</span></div></div>` : ""}
         ${state.role === "admin" ? `<div class="sidebar-footer"><div class="avatar">AU</div><div><strong>${esc(state.admin?.name || "Admin User")}</strong><span>${esc(state.admin?.email)}</span></div></div>` : ""}
-        <button class="logout-link" id="logoutBtn">Sign out</button>
+        <button
+          class="logout-link"
+          id="logoutBtn"
+          type="button"
+          style="display:flex; justify-content:center; align-items:center; transition:0.25s ease;"
+          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.18)';"
+          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+        >
+          Sign out
+        </button>
       </aside>
       <section class="content">
         <div class="topbar">
@@ -942,22 +1025,40 @@ function userDashboard() {
   const totalIn = state.transactions.filter((t) => t.receiver_wallet_id === u.wallet_id).reduce((sum, t) => sum + Number(t.amount || 0), 0);
   const totalOut = state.transactions.filter((t) => t.sender_wallet_id === u.wallet_id).reduce((sum, t) => sum + Number(t.amount || 0), 0);
   shell("Dashboard", `
-    <div class="dashboard-wrap">
+    <div class="dashboard-wrap dashboard-home">
       ${kycStatusBanner()}
       ${walletHealthBanner()}
       <div class="welcome"><h2>Good day, ${esc(firstName(u.name))}</h2><p>Here's your financial overview</p></div>
       <div class="overview-grid">
-        <div class="wallet-hero">
+        <div class="wallet-hero wallet-hero-dash" id="dashWalletHero">
+          <div class="wallet-hero-shine" id="dashWalletShine"></div>
           <span class="wallet-mini-icon">WL</span>
           <div>Total Balance</div>
-          <strong>${walletMoney(u.balance)}</strong>
+          <strong>Rs <span data-count="${(Number(u.balance || 0) / 100).toFixed(2)}" data-decimals="2">0</span></strong>
           <small>Wallet ID</small>
           <span>${esc(u.wallet_id)}</span>
           ${u.upi_id ? `<small>UPI ID</small><span>${esc(u.upi_id)}</span>` : ""}
         </div>
         <div class="side-metrics">
-          <div class="mini-stat in"><span>IN</span><div>Total In<strong>${money(totalIn)}</strong></div></div>
-          <div class="mini-stat out"><span>OUT</span><div>Total Out<strong>${money(totalOut)}</strong></div></div>
+          <div class="mini-stat in">
+            <div class="mini-stat-accent"></div>
+            <div class="mini-stat-icon">↙</div>
+            <div class="mini-stat-content">
+              <p>Total In</p>
+              <strong>₹ <span data-count="${Number(totalIn).toFixed(2)}" data-decimals="2">0</span></strong>
+              <small>Money received</small>
+            </div>
+          </div>
+
+          <div class="mini-stat out">
+            <div class="mini-stat-accent"></div>
+            <div class="mini-stat-icon">↗</div>
+            <div class="mini-stat-content">
+              <p>Total Out</p>
+              <strong>₹ <span data-count="${Number(totalOut).toFixed(2)}" data-decimals="2">0</span></strong>
+              <small>Money spent</small>
+            </div>
+          </div>
         </div>
       </div>
       <div class="form-card wide">
@@ -975,6 +1076,10 @@ function userDashboard() {
       </div>
     </div>
   `);
+  requestAnimationFrame(() => {
+    initCountUps();
+    initDashboardWalletTilt();
+  });
 }
 
 function transactionsTable(rows) {
@@ -1343,13 +1448,14 @@ function adminDashboard() {
   const admins = state.adminData.admins || [];
   const schema = ADMIN_TABLE_SCHEMA[state.adminTable];
   ensureAdminFilter(state.adminTable);
+
   shell("Admin Dashboard", `
     <div class="admin-page">
       <div class="admin-stats">
-        <div class="admin-stat"><span>Total Users</span><strong>${t.users || 0}</strong><b class="stat-icon users">US</b></div>
-        <div class="admin-stat"><span>Total Wallets</span><strong>${t.wallets || 0}</strong><b class="stat-icon wallets">WL</b></div>
-        <div class="admin-stat"><span>Total Transactions</span><strong>${t.transactions || 0}</strong><b class="stat-icon txns">TR</b></div>
-        <div class="admin-stat admin-stat-wide"><span>Money In System</span><strong>${money(t.totalBalance || 0)}</strong><b class="stat-icon money">IN</b></div>
+        <div class="admin-stat admin-stat-glow"><span>Total Users</span><strong><span data-count="${t.users || 0}">0</span></strong><b class="stat-icon users">US</b></div>
+        <div class="admin-stat admin-stat-glow"><span>Total Wallets</span><strong><span data-count="${t.wallets || 0}">0</span></strong><b class="stat-icon wallets">WL</b></div>
+        <div class="admin-stat admin-stat-glow"><span>Total Transactions</span><strong><span data-count="${t.transactions || 0}">0</span></strong><b class="stat-icon txns">TR</b></div>
+        <div class="admin-stat admin-stat-wide admin-stat-glow"><span>Money In System</span><strong>Rs <span data-count="${Number(t.totalBalance || 0).toFixed(2)}" data-decimals="2">0</span></strong><b class="stat-icon money">IN</b></div>
       </div>
 
       <section class="admin-panel">
@@ -1408,6 +1514,8 @@ function adminDashboard() {
       </section>
     </div>
   `);
+
+  requestAnimationFrame(() => initCountUps());
 }
 
 function adminVisibleRows() {
