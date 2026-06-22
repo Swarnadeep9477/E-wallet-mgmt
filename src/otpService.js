@@ -1,13 +1,13 @@
 const nodemailer = require("nodemailer");
 
+// otpService.js
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "swarnadeep9477@gmail.com",
-    pass: "xfak knyg jfyf vaxe" // Use an app password for Gmail
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD
   }
 });
-
 
 
 const bcrypt = require("bcryptjs");
@@ -79,13 +79,20 @@ async function sendOtp({ channel, target, purpose = "signup" }) {
     INSERT INTO otp_challenges (challenge_id, channel, target, purpose, code_hash, expires_at)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(challengeId, channel, normalized, purpose, bcrypt.hashSync(code, 10), expiresAt);
-  if (channel === "email") {
-  await transporter.sendMail({
-    from: "swarnadeep9477@gmail.com",
-    to: normalized,
-    subject: "SwiftPay OTP Verification",
-    text: `Your OTP is ${code}. It is valid for 5 minutes.`
-  });
+  // In otpService.js sendOtp() function
+if (channel === "email") {
+  try {
+    await transporter.sendMail({
+      from: process.env.GMAIL_USER,
+      to: normalized,
+      subject: "SwiftPay OTP Verification",
+      text: `Your OTP is ${code}. It is valid for 5 minutes.`
+    });
+  } catch (emailError) {
+    console.error("Email send failed:", emailError.message);
+    // Still save OTP to DB for testing, but log the error
+    throw new Error("Failed to send OTP email. Please try phone verification.");
+  }
 }
 
   const deliveryHint = channel === "email"
