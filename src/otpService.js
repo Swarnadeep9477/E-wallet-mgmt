@@ -103,7 +103,7 @@ function verifyOtp({ channel, target, code, purpose = "signup" }) {
   const normalized = normalizeTarget(channel, target);
   const row = getLatestChallenge(channel, normalized, purpose);
 
-  if (!row) throw new Error("No OTP found. Request a new code.");
+  if (!row) throw new Error("No OTP found/OTP expired. Request a new code.");
   if (row.verified_at) return { ok: true, already_verified: true, target: normalized };
   if (new Date(row.expires_at).getTime() < Date.now()) {
     throw new Error("OTP expired. Request a new code.");
