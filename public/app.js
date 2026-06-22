@@ -1049,7 +1049,7 @@ function paymentSourcePicker(name, methods, defaultValue = "upi") {
 }
 
 function otpVerifyBlock(channel, label, inputName, verified) {
-  const devHint = channel !== "email" && state.signupOtpDev?.[channel]
+  const devHint = state.signupOtpDev?.[channel]
     ? `<p class="otp-dev-hint subtle">Demo OTP: <code>${esc(state.signupOtpDev[channel])}</code> (also in server console)</p>`
     : "";
   return `
