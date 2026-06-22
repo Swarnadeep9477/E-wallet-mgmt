@@ -8,7 +8,13 @@ const transporter = nodemailer.createTransport({
     pass: process.env.GMAIL_APP_PASSWORD
   }
 });
-
+transporter.verify((err, success) => {
+  if (err) {
+    console.error("SMTP ERROR:", err);
+  } else {
+    console.log("SMTP READY");
+  }
+});
 
 const bcrypt = require("bcryptjs");
 const { db, uid, normalizeEmail } = require("./db");
