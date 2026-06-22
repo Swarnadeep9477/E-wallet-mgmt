@@ -1,15 +1,3 @@
-/*const nodemailer = require("nodemailer");
-
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD
-  }
-});*/
-
-
-
 const bcrypt = require("bcryptjs");
 const { db, uid, normalizeEmail } = require("./db");
 
@@ -59,11 +47,11 @@ function getLatestChallenge(channel, target, purpose = "signup") {
   `).get(channel, normalized, purpose);
 }
 
-
 async function sendOtp({ channel, target, purpose = "signup" }) {
   ensureOtpTable();
   const normalized = normalizeTarget(channel, target);
   const existing = getLatestChallenge(channel, normalized, purpose);
+
   if (existing?.created_at) {
     const elapsed = Date.now() - new Date(existing.created_at).getTime();
     if (elapsed < OTP_COOLDOWN_MS) {
@@ -75,33 +63,21 @@ async function sendOtp({ channel, target, purpose = "signup" }) {
   const code = generateOtpCode();
   const challengeId = uid("OTP");
   const expiresAt = new Date(Date.now() + OTP_TTL_MS).toISOString();
-  db.prepare("DELETE FROM otp_challenges WHERE channel = ? AND target = ? AND purpose = ?").run(channel, normalized, purpose);
+
+  db.prepare(`
+    DELETE FROM otp_challenges
+    WHERE channel = ? AND target = ? AND purpose = ?
+  `).run(channel, normalized, purpose);
+
   db.prepare(`
     INSERT INTO otp_challenges (challenge_id, channel, target, purpose, code_hash, expires_at)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(challengeId, channel, normalized, purpose, bcrypt.hashSync(code, 10), expiresAt);
-  
-  if (channel === "email") {
-  console.log(`[SwiftPay OTP] Email OTP for ${normalized}: ${code}`);
- }
-  
-  /*if (channel === "email") {
-  try {
-    await transporter.sendMail({
-      from: process.env.GMAIL_USER,
-      to: normalized,
-      subject: "SwiftPay OTP Verification",
-      text: `Your OTP is ${code}. It is valid for 5 minutes.`
-    });
-  } catch (err) {
-    console.error("OTP email send failed:", err.message);
-    // Don't block the flow in dev/demo — dev_otp is still returned below
-  }
-}*/
 
-  const deliveryHint = channel === "email"
-    ? `Email OTP sent to ${normalized}`
-    : `SMS OTP sent to +91 ${normalized}`;
+  const deliveryHint =
+    channel === "email"
+      ? `OTP generated for ${normalized}`
+      : `OTP generated for +91 ${normalized}`;
 
   console.log(`[SwiftPay OTP][${purpose}] ${channel}=${normalized} code=${code}`);
 
@@ -119,33 +95,53 @@ async function sendOtp({ channel, target, purpose = "signup" }) {
 
 function verifyOtp({ channel, target, code, purpose = "signup" }) {
   ensureOtpTable();
-  if (!code || String(code).trim().length !== 6) throw new Error("Enter the 6-digit OTP.");
+
+  if (!code || String(code).trim().length !== 6) {
+    throw new Error("Enter the 6-digit OTP.");
+  }
+
   const normalized = normalizeTarget(channel, target);
   const row = getLatestChallenge(channel, normalized, purpose);
+
   if (!row) throw new Error("No OTP found. Request a new code.");
   if (row.verified_at) return { ok: true, already_verified: true, target: normalized };
-  if (new Date(row.expires_at).getTime() < Date.now()) throw new Error("OTP expired. Request a new code.");
-  if (!bcrypt.compareSync(String(code).trim(), row.code_hash)) throw new Error("Invalid OTP. Please try again.");
+  if (new Date(row.expires_at).getTime() < Date.now()) {
+    throw new Error("OTP expired. Request a new code.");
+  }
+  if (!bcrypt.compareSync(String(code).trim(), row.code_hash)) {
+    throw new Error("Invalid OTP. Please try again.");
+  }
 
-  db.prepare("UPDATE otp_challenges SET verified_at = ? WHERE challenge_id = ?").run(new Date().toISOString(), row.challenge_id);
+  db.prepare(`
+    UPDATE otp_challenges
+    SET verified_at = ?
+    WHERE challenge_id = ?
+  `).run(new Date().toISOString(), row.challenge_id);
+
   return { ok: true, target: normalized, purpose };
 }
 
 function isOtpVerified(channel, target, purpose = "signup") {
   ensureOtpTable();
   const normalized = normalizeTarget(channel, target);
+
   const row = db.prepare(`
     SELECT verified_at FROM otp_challenges
     WHERE channel = ? AND target = ? AND purpose = ? AND verified_at IS NOT NULL
     ORDER BY datetime(verified_at) DESC LIMIT 1
   `).get(channel, normalized, purpose);
+
   return Boolean(row?.verified_at);
 }
 
 function clearOtp(channel, target, purpose = "signup") {
   ensureOtpTable();
   const normalized = normalizeTarget(channel, target);
-  db.prepare("DELETE FROM otp_challenges WHERE channel = ? AND target = ? AND purpose = ?").run(channel, normalized, purpose);
+
+  db.prepare(`
+    DELETE FROM otp_challenges
+    WHERE channel = ? AND target = ? AND purpose = ?
+  `).run(channel, normalized, purpose);
 }
 
 module.exports = {
